@@ -1,0 +1,15 @@
+npm notice run api-cache-replay@0.6.2 test:e2e
+npm notice run playwright test --grep D01|E01
+[WebServer] npm notice run api-cache-replay@0.6.2 fixture
+[WebServer] npm notice run node tests/fixtures/server.mjs
+[WebServer] (node:85644) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:85662) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/extension.spec.ts:654:1 › D01 折叠接口行一键强制缓存忽略动态参数，刷新和手动重发保留最新原始请求 (2.4s)
+  ✓  2 tests/e2e/extension.spec.ts:727:1 › E01 真实请求区分首次、参数、过期、手动、清空和规则原因，命中不残留旧原因 (4.6s)
+
+  2 passed (9.4s)

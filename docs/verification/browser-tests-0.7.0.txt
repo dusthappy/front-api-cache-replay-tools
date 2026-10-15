@@ -1,0 +1,53 @@
+npm notice run api-cache-replay@0.7.0 test:e2e
+npm notice run playwright test
+[WebServer] npm notice run api-cache-replay@0.7.0 fixture
+[WebServer] npm notice run node tests/fixtures/server.mjs
+[WebServer] (node:2408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 40 tests using 1 worker
+
+(node:2409) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/e2e/extension.spec.ts:101:1 › A00 只填网站地址即可自动缓存任意路径、跨源与 POST 查询 (1.5s)
+  ✓   2 tests/e2e/extension.spec.ts:165:1 › A00b 自动身份支持 Authorization，同标签页刷新保留缓存且新标签页隔离 (477ms)
+  ✓   3 tests/e2e/extension.spec.ts:186:1 › A01 授权范围与端口精确隔离 (256ms)
+  ✓   4 tests/e2e/extension.spec.ts:193:1 › A05 首次录制、命中与 fetch 原生 Response (179ms)
+  ✓   5 tests/e2e/extension.spec.ts:202:1 › A06 参数规范化与显式 POST 查询 (240ms)
+  ✓   6 tests/e2e/extension.spec.ts:211:1 › A07 忽略参数仅改变匹配、手动重发保留最近原始参数 (204ms)
+  ✓   7 tests/e2e/extension.spec.ts:221:1 › A08 写操作、鉴权接口与始终直通 (275ms)
+  ✓   8 tests/e2e/extension.spec.ts:229:1 › A09 时间语义与关闭缓存后的手动重发 (197ms)
+  ✓   9 tests/e2e/extension.spec.ts:238:1 › A13 业务错误、HTTP 错误、no-store 与大响应 (320ms)
+  ✓  10 tests/e2e/extension.spec.ts:245:1 › A14 身份、租户、环境分区与凭证不落盘 (230ms)
+  ✓  11 tests/e2e/extension.spec.ts:260:1 › A16 清空和关闭再开启阻止在途写入 (2.1s)
+  ✓  12 tests/e2e/extension.spec.ts:270:1 › A16b 同键乱序完成不能覆盖后发成功响应 (687ms)
+  ✓  13 tests/e2e/extension.spec.ts:276:1 › A17 fetch abort 与 XHR json、事件、timeout (283ms)
+  ✓  14 tests/e2e/extension.spec.ts:284:1 › A17b Axios XHR、Request 覆盖与原始正文 (232ms)
+  ✓  15 tests/e2e/extension.spec.ts:293:1 › A17c 跨域 CORS 与当前 Cookie 凭证语义 (188ms)
+  ✓  16 tests/e2e/extension.spec.ts:301:1 › A20 不支持的 Request Body、二进制、Worker 与 iframe 保持原生请求 (270ms)
+  ✓  17 tests/e2e/extension.spec.ts:319:1 › A04 页面快照、历史绑定与独立缓存 (574ms)
+  ✓  18 tests/e2e/extension.spec.ts:328:1 › A19 TTL 与页面清空隔离 (364ms)
+  ✓  19 tests/e2e/extension.spec.ts:334:1 › A02-A03 浮窗交互与窄窗口布局 (1.0s)
+  ✓  20 tests/e2e/extension.spec.ts:359:1 › A10 指定参数组重发不覆盖其他组 (207ms)
+  ✓  21 tests/e2e/extension.spec.ts:365:1 › A14b Cookie 会话与未建立身份上下文 (225ms)
+  ✓  22 tests/e2e/extension.spec.ts:372:1 › A14c 表单登录直通并失效旧身份缓存 (214ms)
+  ✓  23 tests/e2e/extension.spec.ts:381:1 › A01b 设置页表单保存与暂停采集 (357ms)
+  ✓  24 tests/e2e/extension.spec.ts:392:1 › A04b Hash 路由和页面区分参数 (348ms)
+  ✓  25 tests/e2e/extension.spec.ts:399:1 › A18 桥接查询超时只回退一次原始请求 (1.4s)
+  ✓  26 tests/e2e/extension.spec.ts:407:1 › A18b 缓存保存失败不重发真实请求 (359ms)
+  ✓  27 tests/e2e/extension.spec.ts:417:1 › A12 请求并刷新页面等待缓存保存 (519ms)
+  ✓  28 tests/e2e/extension.spec.ts:424:1 › A18c 后台停止后唤醒继续命中 (198ms)
+  ✓  29 tests/e2e/extension.spec.ts:431:1 › A19b 浏览器重启后缓存与规则恢复、运行时模板不持久化 (920ms)
+  ✓  30 tests/e2e/extension.spec.ts:438:1 › B01 自动识别并采用实际 API 范围，轮询与查看不增加业务请求 (3.5s)
+  ✓  31 tests/e2e/extension.spec.ts:521:1 › B02 手工 API 范围仍限制自动发现和缓存，不被自动采用扩大 (609ms)
+  ✓  32 tests/e2e/extension.spec.ts:547:1 › C01 页面加载的用户信息和列表并行请求在连续刷新后命中，真正登录退出仍失效 (1.5s)
+  ✓  33 tests/e2e/extension.spec.ts:584:1 › C02 可见登录 Cookie 切换不串缓存，刷新和后台重启复用而浏览器重启重新录制 (1.2s)
+  ✓  34 tests/e2e/extension.spec.ts:619:1 › C03 自定义凭证请求头按当前身份隔离，刷新与后台重启不丢失正确缓存 (652ms)
+  ✓  35 tests/e2e/extension.spec.ts:654:1 › D01 折叠接口行一键强制缓存忽略动态参数，刷新和手动重发保留最新原始请求 (1.9s)
+  ✓  36 tests/e2e/extension.spec.ts:727:1 › E01 真实请求区分首次、参数、过期、手动、清空和规则原因，命中不残留旧原因 (4.6s)
+  ✓  37 tests/e2e/extension.spec.ts:830:1 › E02 关闭原因准确说明网站、本页或接口层级并优先于参数变化 (251ms)
+  ✓  38 tests/e2e/extension.spec.ts:855:1 › A20b Chrome IndexedDB 旧配置只迁移一次并清除全部旧正文 (588ms)
+  ✓  39 tests/e2e/extension.spec.ts:936:1 › F01 设置页存储统计、一键清理、在途隔离和重新录制 (3.2s)
+  ✓  40 tests/e2e/extension.spec.ts:988:1 › F02 估算不可用、统计读取失败和清理失败均可恢复 (384ms)
+
+  40 passed (35.1s)

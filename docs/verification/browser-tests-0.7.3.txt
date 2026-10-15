@@ -1,0 +1,16 @@
+npm notice run api-cache-replay@0.7.3 test:e2e
+npm notice run playwright test --grep G01|E01|F01
+[WebServer] npm notice run api-cache-replay@0.7.3 fixture
+[WebServer] npm notice run node tests/fixtures/server.mjs
+[WebServer] (node:20018) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:20019) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/extension.spec.ts:729:1 › E01 真实请求区分首次、参数、过期、手动、清空和规则原因，命中不残留旧原因 (4.3s)
+  ✓  2 tests/e2e/extension.spec.ts:947:1 › F01 设置页存储统计、一键清理、在途隔离和重新录制 (3.3s)
+  ✓  3 tests/e2e/extension.spec.ts:1029:1 › G01 清空后请求中、重新录制、命中与失败的提示动态更新 (3.6s)
+
+  3 passed (13.4s)

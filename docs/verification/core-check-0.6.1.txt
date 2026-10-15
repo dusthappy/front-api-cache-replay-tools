@@ -1,0 +1,84 @@
+npm notice run api-cache-replay@0.6.1 check
+npm notice run npm run typecheck && npm test && npm run build
+npm notice run api-cache-replay@0.6.1 typecheck
+npm notice run vue-tsc --noEmit
+npm notice run api-cache-replay@0.6.1 test
+npm notice run node --import tsx --test tests/*.test.ts
+✔ normalization preserves duplicate query order, types, arrays and exact JSON Pointer keys (0.953583ms)
+✔ capture miss, hit, manual refresh and three timestamps remain distinct (7.3875ms)
+✔ ignored query updates latest redacted original, rule change invalidates previous grouping (3.025708ms)
+✔ credentials modes isolate cookie-dependent groups without clearing other cached variants (2.473917ms)
+✔ clear and close/reopen prevent in-flight writes; toggles retain previously successful data (2.023333ms)
+✔ newer successful request wins; newer failure does not discard an older success (3.054084ms)
+✔ failure preserves successful cache timestamp; 401 invalidates it (1.601917ms)
+✔ POST cache opt-out and business success condition are enforced; writes invalidate explicit dependencies (2.428084ms)
+✔ a missing business-success pointer is distinct from an explicit null value (0.876542ms)
+✔ authorization digest, tenant headers, pages and environments partition cache without plaintext credentials (3.166166ms)
+✔ no-store, unsupported responses and TTL enforce recording bounds (3.971417ms)
+✔ sender authorization, exact port, request tickets and permissions cannot be bypassed (1.088959ms)
+✔ auth endpoints invalidate existing cache and never persist token-bearing response previews (3.849875ms)
+✔ request redaction and route identity are precise (0.392875ms)
+✔ capacity uses LRU across cache and previews, clears evicted metadata and commits atomically (0.174125ms)
+✔ pause halts capture, bounded logs/previews replace data and service-worker core recreation restores state (68.407417ms)
+✔ variant metadata is bounded and previews cannot cross document identity contexts (22.709041ms)
+✔ adding only a website automatically discovers and caches all HTTP API origins and POST requests (9.461958ms)
+✔ custom scope filters retain exact origin and path constraints and require a scope (0.677458ms)
+✔ automatic cookie identity survives same-tab reloads and isolates tabs and browser sessions (2.614041ms)
+✔ automatic cookie digest changes partition cache and missing browser identity fails closed (1.891ms)
+✔ automatic identity uses Authorization first and refreshes cache on identity changes (1.501334ms)
+✔ schema one migrates once with atomic body reset, preserving exclusions and user choices after migration (1.344709ms)
+✔ scope discovery requires successful JSON and groups exact API origins, path segments and methods (3.549292ms)
+✔ scope discovery excludes pending, manual, unsupported, auth and unsuccessful responses (6.241708ms)
+✔ scope discovery API isolates website access and custom scopes never expand automatically (1.0105ms)
+✔ scope metadata persists and upgrades schema two without clearing caches; hits backfill it (1.569375ms)
+✔ scope discovery preserves double-slash paths without changing API origin (0.464625ms)
+✔ scope discovery metadata is bounded per group, website and extension (58.615625ms)
+✔ default auth keywords match only the final path segment and explicit path prefixes retain their behavior (0.155292ms)
+✔ login userInfo reads cache normally while real login and logout invalidate cached data (4.082625ms)
+✔ mixed automatic credential delivery and credential headers retain independent cached responses (3.609709ms)
+✔ vary field sets form separate identity channels while real tenant changes still invalidate (3.038375ms)
+✔ preview only exposes identity channels observed in the current document and auth failures clear all channels (2.557959ms)
+✔ preview identity prefixes keep API origins with different ports strictly separate (0.8085ms)
+✔ forced POST cache groups dynamic query and JSON arrays while keeping latest originals and manual refresh (3.104ms)
+✔ forced grouping retains page, endpoint, identity, credential mode and vary header isolation (2.764458ms)
+✔ forced cache obeys TTL and site/page/interface/capture/pause switches (2.620208ms)
+✔ force toggles discard in-flight writes and reject unsupported interface kinds (1.286333ms)
+✔ force never replays over malformed or unsupported requests and retains response validity checks (2.742166ms)
+✔ network reasons preserve first/manual/disabled/bypass outcomes without disabling recording (1.417416ms)
+✔ network diagnostics distinguish normalized query/body changes and respect ignored or forced fields (3.970125ms)
+✔ known expiry, explicit clear, eviction and session changes receive specific reasons (1.627292ms)
+✔ headers, credentials and identity are not misreported as query or body changes (1.595166ms)
+✔ pending, failed and unknown historical requests use evidence-specific fallback reasons (1.584583ms)
+✔ out-of-order completions preserve the latest request UI state and network diagnostic (1.894542ms)
+✔ diagnostic traces and fingerprints are bounded and removed with their variants or binding (11.473917ms)
+✔ a later explicit clear supersedes an earlier eviction diagnostic (0.938041ms)
+✔ HTTP origin SHA-256 fallback matches standard vectors and block boundaries (24.139666ms)
+ℹ tests 49
+ℹ suites 0
+ℹ pass 49
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 383.075167
+npm notice run api-cache-replay@0.6.1 build
+npm notice run node scripts/build.mjs
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 15 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/options.html                  0.39 kB │ gzip:  0.30 kB
+dist/assets/options-C8v2VgVS.css  10.52 kB │ gzip:  3.11 kB
+dist/assets/options-C4reP6qG.js   85.22 kB │ gzip: 33.15 kB
+
+✓ built in 92ms
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 16 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/content.js  118.89 kB │ gzip: 42.30 kB
+
+✓ built in 122ms
+Chrome extension ready: dist/

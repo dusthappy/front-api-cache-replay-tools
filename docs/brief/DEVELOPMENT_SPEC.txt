@@ -1,0 +1,260 @@
+Chrome 页面接口缓存插件 开发说明
+需求基线 1.0
+日期：2026-10-14
+
+01 目标和范围
+
+痛点：前端和后端代码在本地，数据库在远程，接口等待影响反复调试前端。
+目标：允许指定开发网站和后端 API 范围。对开启缓存的查询接口，首次请求真实后端并保存成功响应；再次匹配时直接返回本地响应，不调用原始网络请求。
+首版只支持 Chrome 桌面浏览器，采用 Manifest V3，以本地“加载已解压的扩展程序”方式使用。
+不要求修改现有前后端业务代码，不需要独立代理、数据库服务或云端账号。
+页面内普通异步 fetch 和 XMLHttpRequest 的 JSON 响应是首版支持范围，包括经这些 API 发起的常见浏览器端 Axios 请求。
+首次和未命中请求仍受后端耗时影响；本工具用于前端调试，不代替真实后端逻辑和权限验证。
+
+02 已确认的产品要求
+
+R01 可配置前端网站地址和需要处理的后端 API 范围。
+R02 仅在已配置并获授权的网站显示右上角圆形悬浮按钮，可拖动、记住位置。
+R03 页面初始只有圆按钮。点击展开功能面板，关闭后收回圆按钮。
+R04 面板跟随当前前端页面，展示该页面全部已绑定接口，包括历史绑定但本次尚未调用的接口。
+R05 所有接口详情默认收起。点击接口标题或箭头展开，再次点击收起，允许同时展开多个接口。
+R06 接口收起时直接显示方法、接口名称或路径、最后真实请求时间、状态、缓存开关和重新请求按钮。
+R07 支持网站及当前页面一键开启/关闭缓存，也支持单接口开关和始终直通规则。
+R08 开启缓存的接口自动执行“未命中真实请求并录制，命中直接回放”，无需分别切换录制和回放模式。
+R09 按请求方法、API、参数等匹配，支持按接口配置不参与匹配的 Query 和 JSON Body 字段。
+R10 支持手动重新请求。成功后更新相应缓存和记录，也提供重新请求并刷新页面。
+R11 鉴权、实时测试及具有业务副作用的接口可以保持直通。
+R12 绑定、规则、成功缓存和必要时间记录在页面刷新及浏览器重启后保留；敏感凭证不随请求模板持久化。
+
+03 工程默认值
+
+以下用于让第一版可直接实施，属于可调整默认值，不是额外业务前提。
+界面使用简体中文，接口地址和参数名保持原文。
+建议 TypeScript + Vue 3；构建工具可采用 Vite。初始化时核对所选版本的 Node.js 要求，生成依赖锁文件，不使用浮动版本作为交付保证。
+最低 Chrome 版本暂定 120；最终以选用 API 的实际要求复核。只测试和宣称 Chrome 支持，不制作跨浏览器兼容层。
+新网站、新页面及新绑定接口的缓存默认关闭；用户明确开启后生效。提供批量开启已标记查询接口的操作，始终直通接口不受批量操作影响。
+自动发现与缓存开关分开：已授权网站内，即使缓存关闭，也可记录范围内接口的元数据和绑定；暂停整个扩展则停止采集。
+仅对配置的 API origin/路径范围采集，忽略静态资源、扩展自身请求和开发工具热更新通信。
+默认 TTL 为 30 分钟，可按页面/接口调整，也可选择手动清空前有效。展示缓存年龄。
+单响应正文上限 1 MiB，总缓存上限 100 MiB；超限不缓存并显示原因。总容量超限按最近使用时间淘汰。
+默认保留最近 200 条轻量调用日志，正文只保存受容量限制的成功缓存/最近预览，避免无限日志增长。
+
+04 网站和前端页面识别
+
+网站以 origin 识别，即协议、主机、端口。localhost 与 127.0.0.1 不自动合并，5173 与 3000 端口隔离。
+一个网站可配置多组 API origin 和路径前缀，包含经开发服务器代理的同源 /api 请求。
+提供 environmentId。若同一前端代理地址切换了后端环境，由用户切换环境标识或清空缓存，不能凭相同 URL 推断数据环境未变化。
+页面以 siteId + routeMode + pathname 或 Hash 路由的路径部分 + 用户选定的页面区分参数识别。
+Query 默认不拆成独立页面；影响接口响应的 Query 仍参与请求缓存键。允许选择必要的页面区分字段，避免将不同业务页面错误合并。
+普通网页锚点不当成 Hash 路由；网站配置选择 history/path 或 hash 模式。
+首版按精确路径绑定。动态路径模板如 /users/:id 作为后续增强，不能默认把不同详情路径合并。
+监听常规导航和 SPA 的 pushState、replaceState、popstate、hashchange，切换面板和折叠状态。不要破坏页面原 History 行为。
+请求归属于发起时的页面快照，响应到达时即使已换页也不重新归属。
+不能自动判断组件归属。若应用在切路由前预取下一页数据，默认归当前发起页，用户可手动调整绑定。
+
+05 页面与接口绑定
+
+关系为多对多：一个页面可绑定多个接口，同一接口可绑定多个页面。
+首次观察到范围内请求时自动建立绑定；允许手动添加、删除绑定、设置别名。
+首版按页面隔离缓存和规则，同一个 API 在 A 页面刷新缓存不影响 B 页面。
+接口列表行以 method + apiOrigin + pathname 聚合；同一行下可有多个参数组合。
+详情展示参数组合列表、各组合的时间及缓存状态，支持对选定组合重新请求、清空。
+忽略参数会把多个原始请求合为同一个匹配组；组内保留最近调用的原始参数模板，但只存一份当前缓存响应。
+未触发接口无法自动发现；手动添加但没有完整请求模板时，显示未请求，重新请求按钮不可用并解释原因。
+删除页面绑定同时删除该绑定下缓存和非敏感请求记录，不删除其他页面绑定。
+
+06 悬浮按钮与功能面板
+
+圆按钮默认右上角，建议直径 44 px，距边缘 16 px。记住站点内位置；窗口尺寸变化时约束在可视范围内。
+拖动位移达到阈值后按拖动处理，结束不触发点击。提供键盘访问、清晰焦点和可读标签。
+按钮颜色区分当前页缓存开启/关闭；悬停文本说明状态，不只靠颜色传达。
+点击圆按钮展开面板。面板顶部显示网站、前端路由、环境、网站缓存开关和本页缓存开关。
+面板提供搜索、清空本页缓存、刷新页面、进入网站设置、关闭面板。
+建议面板宽 440 px，上限不超过视口；高度不超过视口 70%，接口列表内部滚动。
+接口行显示方法、别名或路径、最后真实请求时间、最近状态、缓存开关、重新请求、展开箭头。
+显示 HIT 缓存命中、MISS 请求后录制、BYPASS 直通、ERROR 失败、PENDING 请求中，并配中文文本。
+详情包含完整 API 地址、最近原始 Query/Body、忽略匹配字段、有效期、缓存更新时间、命中次数、响应大小、最近耗时、参数组合、响应预览、清空操作。
+响应正文二次折叠且按需渲染，打开面板不读取并渲染所有大 JSON。
+点击开关、重新请求、复制按钮时停止事件冒泡，不触发整行展开。
+打开面板时全部接口详情收起。关闭面板或切路由后重置展开状态，保留搜索以外的持久配置。
+点击面板外部或 Escape 关闭面板；页面正常滚动和点击不被全屏遮罩阻断。
+浮窗采用 Shadow DOM 做样式隔离。高级层叠场景不承诺覆盖浏览器弹窗或站点原生全屏对话框。
+
+07 缓存规则与优先级
+
+判定顺序：
+1. 扩展暂停、网站未授权、URL 超出配置范围：完全旁路。
+2. 网站缓存关闭或页面缓存关闭：真实请求，不读写缓存。
+3. 命中始终直通规则或当前接口关闭：真实请求，不读写缓存。
+4. 不属于允许的查询、请求/响应类型不支持、身份分区无法确定：直通并记录原因。
+5. 满足上述条件且该接口开启：按规范化键查有效缓存。
+6. 命中：合成响应返回调用方，不发送后台更新请求。
+7. 未命中/过期：原生请求，正常返回页面，符合录制条件时保存响应副本。
+
+规则作用域为网站、页面、页面接口绑定；始终直通优先于所有启用规则。
+默认 GET 也只在用户开启对应接口后缓存，不能假设所有 GET 都无副作用。
+POST 查询须手动标记 readOnly，再允许缓存及快捷重发。
+PUT/PATCH/DELETE、保存、创建、登录/登出、令牌刷新等首版不缓存、不开放快捷重发。
+鉴权直通规则提供可编辑预设，如 login/logout/token/refresh，但不能只靠路径名称判定业务安全；用户可明确指定。
+只保存完成读取且符合大小限制的 JSON 响应。默认 HTTP 2xx，排除 204、206、opaque、重定向和流式响应。
+允许配置业务成功条件，如 body.code 等于 0。HTTP 200 内的业务失败不保存。
+401、403、网络异常、超时、取消和业务失败都不录制；观察到当前身份明确失效时停用相关缓存分区。
+首次捕获时不要消费掉调用方的响应 Body，使用受大小上限约束的副本读取；超过上限停止录制。
+默认尊重响应 Cache-Control: no-store；开发者需在具体接口设置明确允许录制，才能覆盖这个限制。普通 no-cache 不意味着禁止这种显式开发回放。
+真实响应若依赖服务端 Cookie 更新等副作用，相关接口应保持直通。不得声称合成响应可还原 Set-Cookie 副作用。
+
+08 匹配键与忽略参数
+
+建议 key = hash(schemaVersion, siteId, pageId, environmentId, identityScope, ruleVersion, method, apiOrigin, pathname, normalizedQuery, normalizedBody, selectedHeaders)。
+协议/主机按标准 URL 解析，保留路径大小写和尾斜杠差别，不把不同资源擅自合并。HTTP fragment 不属于发给后端的 URL。
+Query 忽略字段后按不同键名稳定排列；同名重复值保留原始顺序。保留空字符串、字段缺失等差别。
+JSON 对象递归按键排序；数组保持顺序，保留类型、null 与缺失差别；无法可靠解析的请求体首版旁路。
+已配置的语言、租户等影响响应的请求头参与匹配；身份凭证单独计算摘要，不把原始 Token 写入数据库键或日志。
+首版忽略字段使用明确位置，例如 query.page、query.pageSize、body.pagination.page；Body 内部实现宜用 JSON Pointer，避免含点号字段名的歧义。
+忽略规则只改变匹配键，不能删除或改写真实发送的参数。
+示例：忽略 page/pageSize 后，page=2 和 page=3 会取同一缓存，但 status=active 和 status=disabled 仍是不同匹配组。
+界面提示：被忽略字段不同的请求将返回同一份已录制响应，不会自动计算分页或修改响应里的 page、total、list。
+修改忽略字段、关键匹配头、成功条件、身份方式等后增加规则版本，并失效该绑定的旧缓存，不能继续误用旧键。
+响应保存原始文本及可见的必要状态/头，避免 JSON 解析后再序列化改变精度或格式。
+
+09 时间与请求记录
+
+lastPageCallAt：页面最近调用时间，包含缓存命中，不包含用户在面板发起的手动重发。
+lastNetworkAttemptAt：最近发起原生请求的时间，包含手动重发和失败尝试，缓存命中不更新；UI 主列标为最后真实请求时间。
+cachedAt：最新成功保存到缓存的时间；缓存命中、录制失败或手动重发失败均不更新。
+lastCompletedAt、lastStatus、lastDurationMs、lastError：最近完成结果及耗时。
+时间以 UTC epoch milliseconds 存储，按本机时区显示，跨日显示日期，悬停显示完整时间。
+原生请求可能仍受浏览器 HTTP 缓存或站点 Service Worker 影响，因此“真实请求”表示绕过本扩展，不代表服务端必然收到。验收用无其他缓存的受控测试后端日志确认。
+界面必须同时显示失败状态，不能让新的请求尝试时间误导为数据已更新。
+
+10 重新请求
+
+列表按钮重发该页面该接口最近一次实际调用所对应的完整原始参数，包括被忽略字段。详情里可选择其他参数组合。
+仅对允许的无副作用查询开放。无有效模板、身份上下文不明或暂不支持的请求，禁用按钮并显示原因。
+手动重发绕过本扩展缓存，使用保存的原生 API，标记 manual 来源，避免再进入包装层而递归。
+GET 手动重发尽量绕过 HTTP 缓存，如适用时设置 fetch cache: no-store；站点 Service Worker 的独立行为不属于保证范围。
+使用原 URL、method、body、credentials/withCredentials 和必要请求头语义；不能改成后台跨域请求而无声改变 Cookie/CORS 行为。
+Cookie 由浏览器按当前会话附带，绝不手动拼接持久化 Cookie。
+Authorization 只使用当前标签页、后端范围和身份代次中最近观察到的认证上下文，放在运行时内存中；不得把旧 Token 当成永远有效。
+如果凭证缺失、身份切换、依赖一次性签名/CSRF 值等，要求用户先从页面正常触发请求更新上下文。真实后端返回 401/403 时显示失败，不伪装刷新成功。
+缓存开启且仍符合录制条件：成功后替换目标匹配组缓存，不清空同接口其他有效参数组。
+网站/页面/接口缓存关闭：仍可手动发起允许的真实查询，更新日志与有界预览，但不读写缓存，也不自动开启缓存。
+失败：保留旧成功缓存，显示失败状态和旧缓存时间。身份失效时按身份规则使旧分区不可用。
+重新请求只更新缓存和面板，不承诺修改页面内部状态。
+提供重新请求并刷新页面：在缓存开启时，等待目标新缓存保存成功后再刷新；关闭时刷新仍会正常请求，不能承诺复用刚才结果。
+用户离开原页面后，请求仍按原页面处理，不自动刷新用户已经切换到的新页面。
+
+11 身份、写操作与失效
+
+缓存至少隔离网站、页面、后端环境、身份和租户。
+Authorization 接口按凭证摘要隔离，凭证变化切换分区；令牌轮换可能降低命中率，但不能为了命中跨身份复用。
+Cookie-only 登录无法仅靠普通页面 JS 可靠读取 HttpOnly 身份。首版提供显式会话分区设置；未建立身份上下文时，不缓存需要登录的接口。
+Cookie-only 项目可使用用户明确选择的会话分区进行本地调试；该模式需要在切换账号时重置分区，不能宣称自动认证隔离。自动 Cookie 身份检测作为后续增强。
+明确观察到登录/登出、切换账号/租户、认证失败时，作废旧运行时请求模板并切换/清空相关分区。
+鉴权接口直通不代表缓存业务请求重新鉴权；测试权限和登录过期必须关闭业务缓存。
+写操作始终真实执行。提供写接口成功后清空指定查询接口缓存的配置；默认不猜测接口依赖关系，界面保留清空本页缓存入口。
+清空、关闭缓存、修改规则、切换环境或身份时递增 generation。每次真实请求捕获起始 generation，返回时校验，过期请求可交给原页面，但不得再写缓存。
+关闭再开启也不能恢复先前请求的写入资格。清空接口只改变该作用域，避免误删其他页面。
+同一缓存键重叠请求使用单调序号或条件写入，避免较早发出的慢响应覆盖后发的成功刷新。
+首版不合并并发请求，以免改变取消/超时行为；并发首次请求可能都访问后端，属于明确边界。
+
+12 技术结构
+
+使用 MAIN world 内容脚本在 document_start 安装 fetch/XHR 包装，保存原生引用，防止重复注入。
+使用 ISOLATED world 内容脚本管理 Shadow DOM 浮窗、路由显示和消息桥。
+扩展 Service Worker 管理配置、规则、身份分区、IndexedDB 读写和广播。配置可用 chrome.storage.local，响应正文存扩展来源 IndexedDB。
+不能在内容脚本直接打开 IndexedDB 并假装它是扩展私有数据库；页面上下文的存储属于网站。
+Service Worker 可休眠，不能依赖全局变量保存唯一规则和缓存；每次消息都应可在唤醒后恢复处理。
+MAIN 脚本不能直接使用完整扩展 API，经过受限消息桥访问后台。
+后台依据 browser sender 的 tab/frame/origin 及自身网站配置决定命名空间，不信任页面消息自报的跨站 siteId 或任意缓存查询。
+页面桥只开放当前范围的必要操作，校验消息结构、大小和请求 ID；不要提供任意跨域取数或全库读取能力。
+MAIN world 与页面共享执行环境，不承诺对恶意页面脚本保密；首版只用于用户明确配置的开发站点。
+依赖和执行代码随扩展打包，不使用远程脚本或 eval。
+不以 chrome.debugger 为默认方案，避免与用户打开 DevTools 的调试流程冲突；不依赖 webRequestBlocking 完成回放。
+
+13 请求包装和异常恢复
+
+fetch 支持字符串/URL/Request 输入以及 init 覆盖，不能提前消耗不可重复读取的原始 Body。首版不可重放输入直接旁路。
+缓存命中返回具有正确 body/status/主要可见 headers 的 Response，处理 bodyUsed、clone 和取消时序。不保证 url/type/redirected 元数据与原始响应完全一致。
+XHR 需处理 open/send/setRequestHeader、事件监听、readyState、status、responseText、responseType=json/text、getResponseHeader(s)、timeout、abort 和 withCredentials。
+同步 XHR、二进制、流式、上传进度等先旁路；不要用只改 responseText 的简易补丁交付完整 XHR 支持。
+页面首次启用/新增站点需提示刷新一次以确保早期注入；已注入页面的缓存开关应即时更新，无需刷新。
+初始化阶段只对支持的异步候选请求做有上限的配置等待；超时直通并显示初始化旁路，不让页面永久挂起。
+缓存查询/消息超时自动回退一次真实请求。晚到的缓存结果必须丢弃，不能二次完成请求或重复发送。
+原请求已经发送后，缓存保存失败不能重新发送原请求。
+包装不改动正常错误、取消和超时的可观察行为；页面刷新、扩展重载和后台休眠要有降级路径。
+
+14 权限与站点配置
+
+基础权限以 storage、scripting 和按需站点授权为核心；仅在实现确有需要时增加权限。
+对用户配置网站使用 optional_host_permissions/动态注册内容脚本，不默认请求所有网站访问权限。
+站点授权可能按主机授予，具体端口和页面范围在扩展自己的运行时规则中再次精确校验。
+首版只处理顶层页面。iframe 各自执行环境、Worker、自主 Service Worker 请求不纳入自动覆盖承诺。
+页面的原生跨域请求仍需遵守原有 CORS；扩展不是跨域修复工具。
+chrome://、Chrome Web Store 等受限页面无法按普通开发站点注入，配置时给出明确提示。
+撤销站点授权后停止作用于该网站，不自动删除其他网站配置。
+
+15 建议数据模型
+
+SiteConfig：id、origin、environmentId、routeMode、pageIdentityQueryKeys、apiScopes、cacheEnabled、captureEnabled、floatingPosition、identityMode、defaultTTL。
+PageConfig：id、siteId、routeKey、displayName、cacheEnabled、generation。
+Endpoint：id、method、apiOrigin、pathname、displayName。
+PageEndpointRule：id、pageId、endpointId、enabled、alwaysBypass、readOnly、ignoreQueryKeys、ignoreBodyPointers、varyHeaders、successCondition、ttl、ruleVersion、generation。
+RequestVariant：id、bindingId、normalizedKey、redactedOriginalURL、nonSensitiveBody、lastPageCallAt、lastNetworkAttemptAt、lastStatus；敏感字段不持久化。
+CacheEntry：cacheKey、bindingId、identityScope、ruleVersion、generation、bodyText、status、visibleHeaders、cachedAt、expiresAt、sizeBytes、lastAccessedAt、requestSequence。
+RuntimeRequestContext：tabId、pageId、bindingId、identityGeneration、原始请求模板及必要凭证；仅内存持有，可丢失，丢失后禁用快捷重发直至页面再次调用。
+RequestLog：requestId、bindingId、来源page/manual、状态、时间、耗时、错误摘要；默认脱敏且有上限。
+
+建议模块文件路径
+src/background/index.ts：后台入口与消息路由。
+src/background/cache-store.ts：IndexedDB、容量、TTL、条件写入。
+src/content/main.ts：MAIN world 注入入口。
+src/content/fetch-interceptor.ts：fetch 包装。
+src/content/xhr-interceptor.ts：XHR 包装。
+src/content/bridge.ts：消息协议与超时。
+src/content/route-tracker.ts：页面归属。
+src/ui/FloatingButton.vue：圆按钮。
+src/ui/ApiPanel.vue：当前页面接口列表。
+src/ui/EndpointItem.vue：接口行和折叠详情。
+src/options/：网站、API 范围、身份分区和规则设置。
+src/shared/：类型、标准化、匹配键、规则优先级。
+tests/fixtures/：本地前后端验收环境。
+
+16 开发阶段与交付
+
+阶段一：搭建 Chrome MV3 项目；实现站点设置和按需授权；完成 MAIN/ISOLATED 双入口、最小通信、原生 fetch 的透明旁路；先用本地测试后端核对路径。
+阶段二：实现页面归属、自动绑定、IndexedDB、匹配键、TTL、首次录制/命中回放、接口规则和身份分区；完成清空/关闭在途竞态处理。
+阶段三：实现圆按钮、两级折叠、时间和状态、忽略字段编辑、响应预览、手动重发与刷新。
+阶段四：完成异步 XHR 与 Axios 常见路径兼容，执行验收清单；修复真实故障后交付，不把 UI 完成当成缓存完成。
+
+执行 Agent 应提供源码、package.json 和锁文件、可加载的构建目录、安装/开发/构建命令、测试环境、验证记录及已知限制。
+实际测试结果逐条记录通过、失败、未测；没有 Chrome 环境时不得写成浏览器验证通过。
+验收时通过 chrome://extensions 开发者模式加载构建目录；修改扩展后重新加载扩展，必要时刷新业务页面。
+不要求上架 Chrome 商店、收费、云同步、团队协作或跨浏览器发布。
+
+17 后续增强
+
+动态页面路由模板、跨页共享缓存、可靠 Cookie 身份集成、项目状态管理适配以更新局部组件、规则导入导出、并发去重、iframe/Worker、二进制和流式支持留到后续。
+新增能力不得破坏首版“默认收起、明确缓存状态、命中不访问后端”的行为。
+
+18 官方技术参考
+
+以下页面已用于核对方案。实现时以所用 Chrome/依赖版本的官方文档为准。
+Chrome Content scripts：
+https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts
+Chrome scripting 与执行环境：
+https://developer.chrome.com/docs/extensions/reference/api/scripting
+扩展存储与来源隔离：
+https://developer.chrome.com/docs/extensions/develop/concepts/storage-and-cookies
+Service Worker 生命周期：
+https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle
+webRequest：
+https://developer.chrome.com/docs/extensions/reference/api/webRequest
+declarativeNetRequest：
+https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest
+debugger：
+https://developer.chrome.com/docs/extensions/reference/api/debugger
+Response clone：
+https://developer.mozilla.org/en-US/docs/Web/API/Response/clone
+Response 构造：
+https://developer.mozilla.org/en-US/docs/Web/API/Response/Response

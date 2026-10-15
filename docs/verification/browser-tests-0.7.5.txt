@@ -1,0 +1,14 @@
+npm notice run api-cache-replay@0.7.5 test:e2e
+npm notice run playwright test --grep A02-A03
+[WebServer] npm notice run api-cache-replay@0.7.5 fixture
+[WebServer] npm notice run node tests/fixtures/server.mjs
+[WebServer] (node:88872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:88889) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/extension.spec.ts:334:1 › A02-A03 浮窗交互与窄窗口布局 (1.3s)
+
+  1 passed (3.5s)

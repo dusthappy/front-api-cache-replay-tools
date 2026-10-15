@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API Cache Replay · 页面加载与刷新验收</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;color:#1d2f40;background:#f4f7fa;max-width:800px;margin:50px auto;padding:24px}pre{white-space:pre-wrap;background:white;border:1px solid #d5dfe6;border-radius:8px;padding:20px}</style>
+<h1>页面加载与刷新验收</h1>
+<p>每次加载页面都会并行请求用户信息和列表。连续刷新应回放相同响应，后端计数保持不变。</p>
+<pre id="result" role="status">正在请求用户信息与列表…</pre>
+<script>
+const scenario = location.pathname.split('/').filter(Boolean).at(-1);
+const delays = scenario === 'user-first' ? [5, 90] : scenario === 'list-first' ? [90, 5] : [15, 15];
+window.fixtureCompleted = [];
+window.fixtureLoad = Promise.all(['/api/login/userInfo', '/api/simple-list'].map(async (endpoint, index) => {
+  const query = new URLSearchParams({ scenario, delay: String(delays[index]) });
+  const response = await fetch(`${endpoint}?${query}`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scenario, filter: 'active', page: 1 }),
+  });
+  const result = await response.json();
+  window.fixtureCompleted.push(index === 0 ? 'userInfo' : 'list');
+  return result;
+})).then(results => {
+  document.querySelector('#result').textContent = JSON.stringify({ scenario, results }, null, 2);
+  return results;
+});
+</script>
+</html>
